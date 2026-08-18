@@ -8,8 +8,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import( 
 PostSerializer, Categoryserializer,RegisterSerializer,
-CommentSerializer)
+CommentSerializer, MyTokenObtainPairSerializer)
+from rest_framework_simplejwt.views import TokenObtainPairView
 from .permissions import IsAuthorOrReadOnly
+from rest_framework_simplejwt.tokens import RefreshToken
 class PostViewset(viewsets.ModelViewSet):
     queryset=Post.objects.all()
     serializer_class=PostSerializer
@@ -36,9 +38,22 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        request.user.auth_token.delete()
+         try:
+            refresh_token = request.data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
 
-        return Response(
-            {"message": "Successfully logged out."},
-            status=status.HTTP_200_OK
-        )
+            return Response(
+                {"message": "Successfully logged out"},
+                status=status.HTTP_205_RESET_CONTENT
+            )
+
+         except Exception:
+            return Response(
+                {"error": "Invalid refresh token"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class=MyTokenObtainPairSerializer

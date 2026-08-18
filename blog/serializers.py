@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Post,Category,Comment
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class PostSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,3 +38,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
         return user
+
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        token['username'] = user.username
+        token['email'] = user.email
+
+        return token
