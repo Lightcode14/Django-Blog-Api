@@ -4,6 +4,7 @@ from.models import Like, Post,Comment,Category
 from rest_framework.permissions import (
 IsAuthenticatedOrReadOnly,AllowAny, IsAuthenticated
 )
+from rest_framework.filters import SearchFilter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import( 
@@ -16,6 +17,8 @@ class PostViewset(viewsets.ModelViewSet):
     queryset=Post.objects.all()
     serializer_class=PostSerializer
     permission_classes=[IsAuthorOrReadOnly]
+    filter_backend=[SearchFilter]
+    search_fields=['title','content']
     
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -24,6 +27,8 @@ class PostViewset(viewsets.ModelViewSet):
 class CategoryViewset(viewsets.ModelViewSet):
     queryset=Category.objects.all()
     serializer_class=Categoryserializer
+    filter_backend=[SearchFilter]
+    search_fields=['name']
 
 class CommentViewset(viewsets.ModelViewSet):
     queryset=Comment.objects.all()
