@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import(
- PostViewset,CategoryViewset,CommentViewset,RegisterView,LogoutView,MyTokenObtainPairView   
+ LikeViewset, PostViewset,CategoryViewset,CommentViewset,RegisterView,LogoutView,MyTokenObtainPairView   
 ) 
 from rest_framework_simplejwt.views import(
  TokenObtainPairView,
@@ -13,6 +13,7 @@ router=DefaultRouter()
 router.register("posts",PostViewset)
 router.register("comments",CommentViewset)
 router.register("categories",CategoryViewset)
+router.register("likes",LikeViewset)
 
 
 urlpatterns=[

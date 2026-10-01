@@ -36,3 +36,15 @@ class Comment(models.Model):
   
   def __str__(self):
         return self.body
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    created_at=models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "post"],
+                name="unique_user_post_like"
+            )
+        ]

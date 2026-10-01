@@ -1,13 +1,13 @@
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status
-from.models import Post,Comment,Category
+from.models import Like, Post,Comment,Category
 from rest_framework.permissions import (
 IsAuthenticatedOrReadOnly,AllowAny, IsAuthenticated
 )
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import( 
-PostSerializer, Categoryserializer,RegisterSerializer,
+LikeSerializer, PostSerializer, Categoryserializer,RegisterSerializer,
 CommentSerializer, MyTokenObtainPairSerializer)
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .permissions import IsAuthorOrReadOnly
@@ -24,10 +24,21 @@ class PostViewset(viewsets.ModelViewSet):
 class CategoryViewset(viewsets.ModelViewSet):
     queryset=Category.objects.all()
     serializer_class=Categoryserializer
+
 class CommentViewset(viewsets.ModelViewSet):
     queryset=Comment.objects.all()
     serializer_class=CommentSerializer
     permission_classes=[IsAuthenticatedOrReadOnly]
+    def perform_create(self, serializer):
+            return serializer.save(user=self.request.user)
+
+class LikeViewset(viewsets.ModelViewSet):
+    serializer_class=LikeSerializer
+    queryset=Like.objects.all()
+      ##  def get_queryset(self):
+        ##return Like.objects.all()
+    def perform_create(self, serializer):
+        return serializer.save(user=self.request.user)
 
 class RegisterView(generics.CreateAPIView):
     serializer_class=RegisterSerializer
