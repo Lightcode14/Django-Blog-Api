@@ -3,8 +3,10 @@ from rest_framework import viewsets, generics, status
 from.models import Like, Post,Comment,Category
 from rest_framework.permissions import (
 IsAuthenticatedOrReadOnly,AllowAny, IsAuthenticated
+
 )
-from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import( 
@@ -12,14 +14,17 @@ LikeSerializer, PostSerializer, Categoryserializer,RegisterSerializer,
 CommentSerializer, MyTokenObtainPairSerializer)
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .permissions import IsAuthorOrReadOnly
+from rest_framework.parsers import MultiPartParser,FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 class PostViewset(viewsets.ModelViewSet):
     queryset=Post.objects.all()
     serializer_class=PostSerializer
     permission_classes=[IsAuthorOrReadOnly]
-    filter_backend=[SearchFilter]
+    filter_backend=[SearchFilter,DjangoFilterBackend,OrderingFilter]
+    ordering_fields=['created_at','updated_at','title']
     search_fields=['title','content']
-    
+    filterset_fields=['categories','published']
+    parser_classes=[MultiPartParser,FormParser]
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
      
