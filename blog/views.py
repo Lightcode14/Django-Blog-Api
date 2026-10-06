@@ -10,7 +10,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import( 
-LikeSerializer, PostSerializer, Categoryserializer,RegisterSerializer,
+LikeSerializer, PostSerializer, CategorySerializer,RegisterSerializer,
 CommentSerializer, MyTokenObtainPairSerializer)
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .permissions import IsAuthorOrReadOnly
@@ -25,13 +25,14 @@ class PostViewset(viewsets.ModelViewSet):
     search_fields=['title','content']
     filterset_fields=['categories','published']
     parser_classes=[MultiPartParser,FormParser]
+    ordering=['created_at']
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
      
 
 class CategoryViewset(viewsets.ModelViewSet):
     queryset=Category.objects.all()
-    serializer_class=Categoryserializer
+    serializer_class=CategorySerializer
     filter_backend=[SearchFilter]
     search_fields=['name']
 

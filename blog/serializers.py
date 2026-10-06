@@ -3,26 +3,46 @@ from .models import Like, Post,Category,Comment
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-class PostSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model=Post
-        fields='__all__'
-        read_only_fields=["author"]
+        model=User
+        fields= ['id', 'username', 'email']
 
-class Categoryserializer(serializers.ModelSerializer):
+class CategorySerializer(serializers.ModelSerializer):
+    
     class Meta:
         model=Category
-        fields='__all__'
+        fields = ['id', 'name', 'slug']
+
+
+
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    author = UserSerializer(read_only=True)
     class Meta:
         model=Comment
         fields='__all__'
+    def validate_body(self, value):
+     if len(value.strip()) < 3:
+        raise serializers.ValidationError(
+            "Comment must be at least 3 characters long."
+        )
+     return value
 class LikeSerializer(serializers.ModelSerializer):
     class Meta:
             model=Like
             fields='__all__'
+    def validate(self, data):
+        user = self.context['request'].user
+        post = data.get('post')
+
+        if Like.objects.filter(user=user, post=post).exists():
+            raise serializers.ValidationError(
+                "You have already liked this post."
+            )
+
+        return data
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -55,3 +75,25 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
 
         return token
+
+class PostSerializer(serializers.ModelSerializer):
+    author = UserSerializer(read_only=True)
+    category = CategorySerializer(read_only=True)
+    comments = CommentSerializer(source='comment_set', many=True, read_only=True)
+    class Meta:
+        model=Post
+        fields='__all__'
+    def validate_title(self, value):
+     if len(value) < 5:
+        raise serializers.ValidationError(
+            "Title must be at least 5 characters long."
+        )
+     return value
+    
+    def validate(self, data):
+     if data.get('published') and not data.get('content'):
+        raise serializers.ValidationError(
+            "A post must have content before it can be published."
+        )
+
+     return data

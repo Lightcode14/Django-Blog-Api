@@ -11,10 +11,8 @@ class Post(models.Model):
  published=models.BooleanField(default=False)
  slug=models.SlugField(unique=True)
  category = models.ForeignKey("Category", on_delete=models.CASCADE)
-
-
  
-def __str__(self):
+ def __str__(self):
         return self.title
 
 
