@@ -23,6 +23,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model=Comment
         fields='__all__'
+        read_only_fields=['author','post']
     def validate_body(self, value):
      if len(value.strip()) < 3:
         raise serializers.ValidationError(
@@ -79,7 +80,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class PostSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     category = CategorySerializer(read_only=True)
-    comments = CommentSerializer(source='comment_set', many=True, read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)
     class Meta:
         model=Post
         fields='__all__'

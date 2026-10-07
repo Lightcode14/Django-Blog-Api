@@ -13,13 +13,15 @@ from .serializers import(
 LikeSerializer, PostSerializer, CategorySerializer,RegisterSerializer,
 CommentSerializer, MyTokenObtainPairSerializer)
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .permissions import IsAuthorOrReadOnly
+from .permissions import IsAuthorOrReadOnly,IsLikeOwnerOrReadOnly
 from rest_framework.parsers import MultiPartParser,FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
+
+
 class PostViewset(viewsets.ModelViewSet):
     queryset=Post.objects.all()
     serializer_class=PostSerializer
-    permission_classes=[IsAuthorOrReadOnly]
+    permission_classes=[IsAuthorOrReadOnly,IsAuthenticatedOrReadOnly]
     filter_backend=[SearchFilter,DjangoFilterBackend,OrderingFilter]
     ordering_fields=['created_at','updated_at','title']
     search_fields=['title','content']
@@ -39,13 +41,14 @@ class CategoryViewset(viewsets.ModelViewSet):
 class CommentViewset(viewsets.ModelViewSet):
     queryset=Comment.objects.all()
     serializer_class=CommentSerializer
-    permission_classes=[IsAuthenticatedOrReadOnly]
+    permission_classes=[IsAuthenticatedOrReadOnly,IsAuthorOrReadOnly]
     def perform_create(self, serializer):
-            return serializer.save(user=self.request.user)
+           serializer.save(author=self.request.user)
 
 class LikeViewset(viewsets.ModelViewSet):
     serializer_class=LikeSerializer
     queryset=Like.objects.all()
+    permission_classes=[IsAuthenticatedOrReadOnly,IsLikeOwnerOrReadOnly]
       ##  def get_queryset(self):
         ##return Like.objects.all()
     def perform_create(self, serializer):
