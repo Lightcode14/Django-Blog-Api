@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'drf_spectacular',
+    
 
 ]
 
@@ -160,19 +161,4 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 
-    'SECURITY': [
-        {
-            'bearerAuth': []
-        }
-    ],
-
-    'APPEND_COMPONENTS': {
-        'securitySchemes': {
-            'bearerAuth': {
-                'type': 'http',
-                'scheme': 'bearer',
-                'bearerFormat': 'JWT',
-            }
-        }
-    },
 }

@@ -4,7 +4,6 @@ from .views import(
  LikeViewset, PostViewset,CategoryViewset,CommentViewset,RegisterView,LogoutView,MyTokenObtainPairView   
 ) 
 from rest_framework_simplejwt.views import(
- TokenObtainPairView,
  TokenRefreshView,
 )
 from drf_spectacular.views import (
@@ -24,7 +23,6 @@ urlpatterns=[
     path("", include(router.urls)),
     path("register/",RegisterView.as_view(), name="register"),
     path("logout/",LogoutView.as_view(), name="logout"),
-    path("token/" ,MyTokenObtainPairView.as_view(),name="token-obtain"),
     path("token/refresh/" ,TokenRefreshView.as_view(),name="token-refresh"),
     path("token/" ,MyTokenObtainPairView.as_view(),name="token-obtain"),
     path("schema/" ,SpectacularAPIView.as_view(),name="schema"),

@@ -23,7 +23,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model=Comment
         fields='__all__'
-        read_only_fields=['author','post']
+        read_only_fields=['author']
     def validate_body(self, value):
      if len(value.strip()) < 3:
         raise serializers.ValidationError(
@@ -34,6 +34,7 @@ class LikeSerializer(serializers.ModelSerializer):
     class Meta:
             model=Like
             fields='__all__'
+            read_only_fields = ['user']
     def validate(self, data):
         user = self.context['request'].user
         post = data.get('post')
@@ -77,24 +78,36 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return token
 
+
 class PostSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
-    category = CategorySerializer(read_only=True)
-    comments = CommentSerializer(many=True, read_only=True)
-    class Meta:
-        model=Post
-        fields='__all__'
-    def validate_title(self, value):
-     if len(value) < 5:
-        raise serializers.ValidationError(
-            "Title must be at least 5 characters long."
-        )
-     return value
-    
-    def validate(self, data):
-     if data.get('published') and not data.get('content'):
-        raise serializers.ValidationError(
-            "A post must have content before it can be published."
-        )
 
-     return data
+    category = CategorySerializer(read_only=True)
+
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        source='category',
+        write_only=True
+    )
+
+    comments = CommentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Post
+        fields = '__all__'
+
+    def validate_title(self, value):
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "Title must be at least 5 characters long."
+            )
+        return value
+
+    def validate(self, data):
+        if data.get('published') and not data.get('content'):
+            raise serializers.ValidationError(
+                "A post must have content before it can be published."
+            )
+
+        return data
+
