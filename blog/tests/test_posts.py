@@ -723,3 +723,236 @@ def test_user_cannot_like_same_post_twice():
         post=post,
         user=user
     ).count() == 1
+@pytest.mark.django_db
+def test_authenticated_user_can_unlike_post():
+    user = User.objects.create_user(
+        username="liker",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post To Unlike",
+        slug="post-to-unlike",
+        content="This post will be unliked.",
+        category=category
+    )
+
+    # Create the like first
+    Like.objects.create(
+        post=post,
+        user=user
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.delete(f"/likes/{Like.objects.get(post=post, user=user).id}/")
+
+    assert response.status_code == 204
+
+    assert not Like.objects.filter(
+        post=post,
+        user=user
+    ).exists()
+@pytest.mark.django_db
+def test_unauthenticated_user_cannot_unlike_post():
+    user = User.objects.create_user(
+        username="liker",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post To Unlike",
+        slug="post-to-unlike",
+        content="This post will be unliked.",
+        category=category
+    )
+
+    like = Like.objects.create(
+        post=post,
+        user=user
+    )
+
+    client = APIClient()
+
+    response = client.delete(f"/likes/{like.id}/")
+
+    assert response.status_code in [401, 403]
+
+    assert Like.objects.filter(
+        id=like.id
+    ).exists()
+@pytest.mark.django_db
+def test_user_cannot_delete_another_users_like():
+    user1 = User.objects.create_user(
+        username="user1",
+        password="password123"
+    )
+
+    user2 = User.objects.create_user(
+        username="user2",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user1,
+        title="Post To Like",
+        slug="post-to-like",
+        content="This post will be liked.",
+        category=category
+    )
+
+    like = Like.objects.create(
+        post=post,
+        user=user1
+    )
+
+    client = APIClient()
+
+    # Authenticate as user2
+    client.force_authenticate(user=user2)
+
+    response = client.delete(
+        f"/likes/{like.id}/"
+    )
+
+    assert response.status_code in [403, 404]
+
+    # User1's Like must still exist
+    assert Like.objects.filter(
+        id=like.id
+    ).exists()
+@pytest.mark.django_db
+def test_deleting_like_does_not_delete_post():
+    user = User.objects.create_user(
+        username="liker",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post To Like",
+        slug="post-to-like",
+        content="This post will be liked.",
+        category=category
+    )
+
+    like = Like.objects.create(
+        post=post,
+        user=user
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.delete(
+        f"/likes/{like.id}/"
+    )
+
+    assert response.status_code == 204
+
+    # The Like should be gone
+    assert not Like.objects.filter(
+        id=like.id
+    ).exists()
+
+    # But the Post should still exist
+    assert Post.objects.filter(
+        id=post.id
+    ).exists()
+
+@pytest.mark.django_db
+def test_authenticated_user_can_create_comment():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post With Comment",
+        slug="post-with-comment",
+        content="This post will receive a comment.",
+        category=category
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    data = {
+        "post": post.id,
+        "body": "This is a great post!"
+    }
+
+    response = client.post("/comments/", data)
+
+    assert response.status_code == 201, response.data
+
+    assert Comment.objects.filter(
+        post=post,
+        author=user,
+        body="This is a great post!"
+    ).exists()
+
+@pytest.mark.django_db
+def test_unauthenticated_user_cannot_create_comment():
+    user = User.objects.create_user(
+        username="postauthor",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post For Comment",
+        slug="post-for-comment",
+        content="This post will receive a comment.",
+        category=category
+    )
+
+    client = APIClient()
+
+    data = {
+        "post": post.id,
+        "body": "Anonymous comment"
+    }
+
+    response = client.post("/comments/", data)
+
+    assert response.status_code in [401, 403]
+
+    assert not Comment.objects.filter(
+        post=post,
+        body="Anonymous comment"
+    ).exists()
