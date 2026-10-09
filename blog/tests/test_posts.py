@@ -956,3 +956,434 @@ def test_unauthenticated_user_cannot_create_comment():
         post=post,
         body="Anonymous comment"
     ).exists()
+
+@pytest.mark.django_db
+def test_comment_author_is_authenticated_user():
+    author = User.objects.create_user(
+        username="postauthor",
+        password="password123"
+    )
+
+    commenter = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=author,
+        title="Post With Comment",
+        slug="post-with-comment",
+        content="This post will receive a comment.",
+        category=category
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=commenter)
+
+    data = {
+        "post": post.id,
+        "body": "This is my comment.",
+        "author": author.id
+    }
+
+    response = client.post("/comments/", data)
+
+    assert response.status_code == 201, response.data
+
+    comment = Comment.objects.get(
+        post=post,
+        body="This is my comment."
+    )
+
+    assert comment.author == commenter
+    assert comment.author != author
+
+@pytest.mark.django_db
+def test_authenticated_user_can_update_own_comment():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post With Comment",
+        slug="post-with-comment",
+        content="This post has a comment.",
+        category=category
+    )
+
+    comment = Comment.objects.create(
+        post=post,
+        author=user,
+        body="This is the original comment."
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    data = {
+        "body": "This is the updated comment."
+    }
+
+    response = client.patch(
+        f"/comments/{comment.id}/",
+        data,
+        format="json"
+    )
+
+    assert response.status_code == 200, response.data
+
+    comment.refresh_from_db()
+
+    assert comment.body == "This is the updated comment."
+    assert comment.author == user
+
+
+@pytest.mark.django_db
+def test_unauthenticated_user_cannot_update_comment():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post With Comment",
+        slug="post-with-comment",
+        content="This post has a comment.",
+        category=category
+    )
+
+    comment = Comment.objects.create(
+        post=post,
+        author=user,
+        body="Original comment."
+    )
+
+    client = APIClient()
+
+    response = client.patch(
+        f"/comments/{comment.id}/",
+        {"body": "Modified by anonymous user."},
+        format="json"
+    )
+
+    assert response.status_code in [401, 403]
+
+    comment.refresh_from_db()
+
+    assert comment.body == "Original comment."
+
+@pytest.mark.django_db
+def test_unauthenticated_user_cannot_delete_comment():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post With Comment",
+        slug="post-with-comment",
+        content="This post has a comment.",
+        category=category
+    )
+
+    comment = Comment.objects.create(
+        post=post,
+        author=user,
+        body="This comment must remain."
+    )
+
+    client = APIClient()
+
+    response = client.delete(
+        f"/comments/{comment.id}/"
+    )
+
+    assert response.status_code in [401, 403]
+
+    assert Comment.objects.filter(
+        id=comment.id
+    ).exists()
+
+@pytest.mark.django_db
+def test_comment_body_cannot_be_empty():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post With Comment",
+        slug="post-with-comment",
+        content="This post has a comment.",
+        category=category
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    data = {
+        "post": post.id,
+        "body": ""
+    }
+
+    response = client.post(
+        "/comments/",
+        data,
+        format="json"
+    )
+
+    assert response.status_code == 400, response.data
+
+    assert not Comment.objects.filter(
+        post=post,
+        author=user
+    ).exists()
+
+@pytest.mark.django_db
+def test_comment_cannot_reference_nonexistent_post():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    data = {
+        "post": 999999,
+        "body": "This post does not exist."
+    }
+
+    response = client.post(
+        "/comments/",
+        data,
+        format="json"
+    )
+
+    assert response.status_code == 400, response.data
+
+    assert not Comment.objects.filter(
+        body="This post does not exist."
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_comment_rejects_non_integer_post_id():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    data = {
+        "post": "not-a-valid-id",
+        "body": "This comment has an invalid post ID."
+    }
+
+    response = client.post(
+        "/comments/",
+        data,
+        format="json"
+    )
+
+    assert response.status_code == 400, response.data
+
+    assert not Comment.objects.filter(
+        body="This comment has an invalid post ID."
+    ).exists()
+
+@pytest.mark.django_db
+def test_comment_body_cannot_contain_only_whitespace():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Post With Comment",
+        slug="post-with-comment",
+        content="This post has a comment.",
+        category=category
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    data = {
+        "post": post.id,
+        "body": "   "
+    }
+
+    response = client.post(
+        "/comments/",
+        data,
+        format="json"
+    )
+
+    assert response.status_code == 400, response.data
+
+    assert not Comment.objects.filter(
+        post=post,
+        author=user
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_updating_comment_body_preserves_original_post():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post1 = Post.objects.create(
+        author=user,
+        title="First Post",
+        slug="first-post",
+        content="The original post.",
+        category=category
+    )
+
+    post2 = Post.objects.create(
+        author=user,
+        title="Second Post",
+        slug="second-post",
+        content="Another post.",
+        category=category
+    )
+
+    comment = Comment.objects.create(
+        post=post1,
+        author=user,
+        body="Original comment."
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.patch(
+        f"/comments/{comment.id}/",
+        {"body": "Updated comment."},
+        format="json"
+    )
+
+    assert response.status_code == 200, response.data
+
+    comment.refresh_from_db()
+
+    assert comment.body == "Updated comment."
+    assert comment.post == post1
+    assert comment.post != post2
+
+@pytest.mark.django_db
+def test_user_cannot_change_comment_author():
+    author = User.objects.create_user(
+        username="author",
+        password="password123"
+    )
+
+    another_user = User.objects.create_user(
+        username="anotheruser",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=author,
+        title="Test Post",
+        slug="test-post",
+        content="Test content.",
+        category=category
+    )
+
+    comment = Comment.objects.create(
+        post=post,
+        author=author,
+        body="Original comment."
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=author)
+
+    response = client.patch(
+        f"/comments/{comment.id}/",
+        {
+            "body": "Updated comment.",
+            "author": another_user.id
+        },
+        format="json"
+    )
+
+    assert response.status_code in [200, 400]
+
+    comment.refresh_from_db()
+
+    assert comment.author == author
+
+@pytest.mark.django_db
+def test_comment_creation_requires_post():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(
+        "/comments/",
+        {"body": "A comment without a post."},
+        format="json"
+    )
+
+    assert response.status_code == 400, response.data
+
+    assert not Comment.objects.filter(
+        body="A comment without a post."
+    ).exists()
