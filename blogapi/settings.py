@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from datetime import timedelta
 from pathlib import Path
+import os
 
 import rest_framework
 
@@ -134,8 +135,17 @@ STATIC_URL = 'static/'
 MAILERS = {
     'default': {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'OPTIONS':{
+               "host":"smtp-relay.brevo.com",
+            "port":"587",
+            "username":os.getenv("EMAIL_HOST_USER"),
+            "password":os.getenv("EMAIL_HOST_PASSWORD"),
+            "use_tls":True
+        }
     },
+   
 }
+DEFAULT_FROM_EMAIL=os.getenv("DEFAULT_FROM_EMAIL")
 
 REST_FRAMEWORK={
     'DEFAULT_AUTHENTICATION_CLASSES':[
