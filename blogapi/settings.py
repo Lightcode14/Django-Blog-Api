@@ -34,7 +34,8 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = [
     "localhost",
-    "127.0.0.1"
+    "127.0.0.1",
+    "https://django-blog-api-ouzh.onrender.com/"
 ]
 
 
