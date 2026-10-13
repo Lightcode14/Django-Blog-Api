@@ -1,10 +1,12 @@
+from django.db.migrations import serializer
 from django.shortcuts import render
-from rest_framework import viewsets, generics, status
+from rest_framework import serializers, viewsets, generics, status
 from.models import Like, Post,Comment,Category
 from rest_framework.permissions import (
 IsAuthenticatedOrReadOnly,AllowAny, IsAuthenticated
 
 )
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.views import APIView
@@ -28,6 +30,24 @@ class PostViewset(viewsets.ModelViewSet):
     filterset_fields=['categories','published']
     parser_classes=[MultiPartParser,FormParser]
     ordering=['created_at']
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Staff can access all posts.
+        if user.is_authenticated and user.is_staff:
+            return Post.objects.all()
+
+        # Authenticated users can see published posts
+        # and their own unpublished posts.
+        if user.is_authenticated:
+            return Post.objects.filter(
+                Q(published=True) | Q(author=user)
+            )
+
+        # Anonymous users can only see published posts.
+        return Post.objects.filter(published=True)
+    
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
      
@@ -39,12 +59,23 @@ class CategoryViewset(viewsets.ModelViewSet):
     search_fields=['name']
 
 class CommentViewset(viewsets.ModelViewSet):
-    queryset=Comment.objects.all()
-    serializer_class=CommentSerializer
-    permission_classes=[IsAuthenticatedOrReadOnly,IsAuthorOrReadOnly]
-    def perform_create(self, serializer):
-           serializer.save(author=self.request.user)
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
 
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def perform_update(self, serializer):
+        if "post" in self.request.data:
+            requested_post_id = self.request.data.get("post")
+
+            if str(requested_post_id) != str(serializer.instance.post_id):
+                raise serializers.ValidationError({
+                    "post": "You cannot change the post of an existing comment."
+                })
+
+        serializer.save()
 class LikeViewset(viewsets.ModelViewSet):
     serializer_class=LikeSerializer
     queryset=Like.objects.all()

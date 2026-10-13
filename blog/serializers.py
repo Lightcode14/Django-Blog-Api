@@ -17,19 +17,25 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 
-
 class CommentSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
+
     class Meta:
-        model=Comment
-        fields='__all__'
-        read_only_fields=['author']
+        model = Comment
+        fields = "__all__"
+        read_only_fields = ["author"]
+
     def validate_body(self, value):
-     if len(value.strip()) < 3:
-        raise serializers.ValidationError(
-            "Comment must be at least 3 characters long."
-        )
-     return value
+        if len(value.strip()) < 3:
+            raise serializers.ValidationError(
+                "Comment must contain at least 3 characters."
+            )
+        return value
+
+
+
+
+
 class LikeSerializer(serializers.ModelSerializer):
     class Meta:
             model=Like

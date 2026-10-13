@@ -77,7 +77,8 @@ def test_user_cannot_edit_another_users_post():
         title="Original Post",
         slug="original-post",
         content="Original content",
-        category=category
+        category=category,
+        published=True
     )
 
     client = APIClient()
@@ -115,7 +116,8 @@ def test_author_can_edit_own_post():
         title="Original Post",
         slug="original-post",
         content="Original content",
-        category=category
+        category=category,
+        published= True
     )
 
     client = APIClient()
@@ -161,7 +163,8 @@ def test_user_cannot_delete_another_users_post():
         title="Original Post",
         slug="original-post",
         content="Original content",
-        category=category
+        category=category,
+        published=True
     )
 
     client = APIClient()
@@ -1387,3 +1390,98 @@ def test_comment_creation_requires_post():
     assert not Comment.objects.filter(
         body="A comment without a post."
     ).exists()
+
+@pytest.mark.django_db
+def test_comment_update_rejects_body_shorter_than_three_characters():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post = Post.objects.create(
+        author=user,
+        title="Test Post",
+        slug="test-post",
+        content="Test content.",
+        category=category
+    )
+
+    comment = Comment.objects.create(
+        post=post,
+        author=user,
+        body="This is a valid original comment."
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.patch(
+        f"/comments/{comment.id}/",
+        {"body": "Hi"},
+        format="json"
+    )
+
+    assert response.status_code == 400, response.data
+
+    comment.refresh_from_db()
+
+    assert comment.body == "This is a valid original comment."
+
+@pytest.mark.django_db
+def test_user_cannot_change_comment_post():
+    user = User.objects.create_user(
+        username="commenter",
+        password="password123"
+    )
+
+    category = Category.objects.create(
+        name="Technology",
+        slug="technology"
+    )
+
+    post1 = Post.objects.create(
+        author=user,
+        title="First Post",
+        slug="first-post",
+        content="First post content.",
+        category=category
+    )
+
+    post2 = Post.objects.create(
+        author=user,
+        title="Second Post",
+        slug="second-post",
+        content="Second post content.",
+        category=category
+    )
+
+    comment = Comment.objects.create(
+        post=post1,
+        author=user,
+        body="Original comment."
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.patch(
+        f"/comments/{comment.id}/",
+        {
+            "body": "Updated comment.",
+            "post": post2.id
+        },
+        format="json"
+    )
+
+    assert response.status_code in [200, 400]
+
+    comment.refresh_from_db()
+
+    assert comment.post == post1
+
+
