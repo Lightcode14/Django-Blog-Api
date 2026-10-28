@@ -35,9 +35,14 @@ class PostViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
+        queryset = Post.objects.select_related(
+        "author", "category"
+    ).prefetch_related("comments")
+
+
         # Staff can access all posts.
         if user.is_authenticated and user.is_staff:
-            return Post.objects.all()
+            return queryset
 
         # Authenticated users can see published posts
         # and their own unpublished posts.

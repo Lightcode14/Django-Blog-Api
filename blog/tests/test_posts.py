@@ -6,6 +6,12 @@ from blog.models import Category, Like, Post,Comment
 from blog.models import Category
 
 
+
+@pytest.fixture(autouse=True)
+def disable_ssl_redirect_for_tests(settings):
+    settings.SECURE_SSL_REDIRECT = False
+
+
 @pytest.mark.django_db
 def test_create_post():
     user = User.objects.create_user(
